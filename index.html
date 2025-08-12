@@ -1,139 +1,45 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Shyam'web</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shyam's Website</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="site-header">
-    <div class="container">
-      <h1> — GitHub Pages Ready</h1>
-      <p class="subtitle">Generate a huge HTML file locally and download it to push to GitHub Pages. ⚠️ Read warnings before generating.</p>
-    </div>
-  </header>
+    
+    <header>
+        <nav>
+            <div class="logo">Shyam's Web</div>
+            <ul>
+                <li><a href="#home">Home</a></li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
 
-  <main class="container controls">
-    <div class="control-row">
-      <label for="lines">Lines to generate (max 1,000,000):</label>
-      <input id="lines" type="number" value="1000000" min="1" max="1000000" />
-      <button id="generate" class="btn primary">Generate & Render</button>
-      <button id="download" class="btn" disabled>Download HTML File</button>
-      <button id="clear" class="btn">Clear</button>
-    </div>
-    <div class="info" id="info">Rendered: <span id="count">0</span> — Memory/Performance: <span id="perf">idle</span></div>
-
-    <section id="preview" class="preview" aria-live="polite">
-      <!-- Generated content will appear here -->
+    
+    <section id="home" class="hero">
+        <h1>Welcome to My Website</h1>
+        <p>Hosted for free with GitHub Pages</p>
+        <a href="#about" class="btn">Learn More</a>
     </section>
-  </main>
 
-  <footer class="site-footer">
-    <div class="container">Made for testing large static pages. Be careful — generated files can be huge.</div>
-  </footer>
+    
+    <section id="about" class="about">
+        <h2>About Me</h2>
+        <p>Hello! I'm Shyam, a DevOps enthusiast and web developer. This is my first GitHub Pages project.</p>
+    </section>
 
-  <script>
-    // Efficient batched generator + download of full HTML file
-    (function(){
-      const generateBtn = document.getElementById('generate');
-      const downloadBtn = document.getElementById('download');
-      const clearBtn = document.getElementById('clear');
-      const linesInput = document.getElementById('lines');
-      const preview = document.getElementById('preview');
-      const countEl = document.getElementById('count');
-      const perfEl = document.getElementById('perf');
+    <section id="contact" class="contact">
+        <h2>Contact</h2>
+        <p>Email: shyam@example.com</p>
+        <p>GitHub: <a href="https://github.com/shyamsut" target="_blank">shyamsut</a></p>
+    </section>
 
-      let lastBlobUrl = null;
-
-      function makeCardHTML(i){
-        return `  <article class="card">\n    <h2>Item #${i} — Demo Title</h2>\n    <div class="meta">Generated for testing — item ${i}</div>\n    <p>This is filler content for item ${i}. Use it for performance and hosting tests.</p>\n  </article>\n`;
-      }
-
-      async function renderBatched(total){
-        preview.innerHTML = '';
-        countEl.textContent = '0';
-        perfEl.textContent = 'rendering...';
-        const batch = 1000; // number of items appended per micro-batch — tuned to balance speed and responsiveness
-        let i = 1;
-        while(i <= total){
-          const stop = Math.min(i + batch - 1, total);
-          const frag = document.createElement('div');
-          let inner = '';
-          for(let k = i; k <= stop; k++){
-            inner += makeCardHTML(k);
-          }
-          frag.innerHTML = inner;
-          // move children out of frag into preview
-          while(frag.firstChild){ preview.appendChild(frag.firstChild); }
-          countEl.textContent = stop.toString();
-          // yield control so the browser can update UI and avoid freezing
-          await new Promise(r => setTimeout(r, 0));
-          i = stop + 1;
-        }
-        perfEl.textContent = 'finished rendering';
-      }
-
-      async function buildAndPrepareDownload(total){
-        // Build full HTML as a string in streamed batches to avoid huge memory spikes where possible
-        perfEl.textContent = 'building downloadable HTML...';
-        const head = `<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n<title>Generated ${total} items</title>\n<link rel=\"stylesheet\" href=\"styles.css\">\n</head>\n<body>\n<main>\n`;
-        const tail = `</main>\n</body>\n</html>`;
-
-        // Use an array of strings and then create a blob at the end. For 1,000,000 items this will be large — browser may need a lot of memory.
-        const parts = [head];
-        const chunk = 5000; // items per chunk added to parts
-        for(let i = 1; i <= total; i += chunk){
-          const stop = Math.min(i + chunk - 1, total);
-          let s = '';
-          for(let k = i; k <= stop; k++) s += makeCardHTML(k);
-          parts.push(s);
-          perfEl.textContent = `building: ${stop} / ${total}`;
-          // yield
-          await new Promise(r => setTimeout(r, 0));
-        }
-        parts.push(tail);
-        perfEl.textContent = 'creating blob...';
-        const blob = new Blob(parts, {type:'text/html'});
-        if(lastBlobUrl) URL.revokeObjectURL(lastBlobUrl);
-        lastBlobUrl = URL.createObjectURL(blob);
-        downloadBtn.href = lastBlobUrl;
-        downloadBtn.download = `generated-${total}-items.html`;
-        downloadBtn.disabled = false;
-        perfEl.textContent = 'ready to download';
-      }
-
-      generateBtn.addEventListener('click', async () => {
-        const total = Math.max(1, Math.min(1000000, Math.floor(Number(linesInput.value) || 1000000)));
-        // quick safety check and prompt if very large
-        if(total > 500000){
-          if(!confirm('You are about to generate a very large file. This can use a lot of memory and may crash older browsers. Continue?')) return;
-        }
-        // render preview (DOM)
-        try{
-          await renderBatched(total);
-        }catch(e){
-          perfEl.textContent = 'error during render: '+e.message;
-          console.error(e);
-        }
-        // prepare downloadable file — do not block UI while building
-        setTimeout(() => { buildAndPrepareDownload(total).catch(e => { perfEl.textContent = 'error building download: '+e.message; console.error(e) }); }, 100);
-      });
-
-      clearBtn.addEventListener('click', () => {
-        preview.innerHTML = '';
-        countEl.textContent = '0';
-        perfEl.textContent = 'idle';
-        if(lastBlobUrl){ URL.revokeObjectURL(lastBlobUrl); lastBlobUrl = null; downloadBtn.disabled = true; }
-      });
-
-      // Setup download anchor behavior
-      downloadBtn.addEventListener('click', (e) => {
-        if(downloadBtn.disabled) e.preventDefault();
-        // after download user will have a file they can push to GitHub Pages as index.html (rename as needed)
-      });
-
-    })();
-  </script>
+    <footer>
+        <p>&copy; 2025 Shyam's Website | All Rights Reserved</p>
+    </footer>
 </body>
 </html>
